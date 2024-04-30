@@ -1,6 +1,7 @@
 package hello.springtx.propagation;
 
 import lombok.extern.slf4j.Slf4j;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -9,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.transaction.interceptor.DefaultTransactionAttribute;
 
 import javax.sql.DataSource;
@@ -148,5 +150,31 @@ class BasicTxTest {
 
         log.info("외부 트랜잭션 롤백");
         txManager.rollback(outer);
+    }
+
+    /**
+     * 내부 롤백
+     - 내부 트랜잭션이 롤백했지만 내부 트랜잭션은 물리 트랜잭션에 영향을 주지 않음, 그런데 외부 트랜잭션은 커밋을 해버림
+     -> 지금까지 보면 외부 트랜잭션만 물리 트랜잭션에 영향을 주기 때문에 물리 트랜잭션이 커밋될 것 같음
+
+     * 정리
+     - 논리 트랜잭션이 하라나도 롤백되면 물리 트랜잭션은 롤백
+     - 내부 트랜잭션이 롤백되면 롤백 전용 마크를 표시(rollbackOnly = true)
+     - 외부 트랜잭션을 커밋할 때 롤백 전용 마크를 확인하고 마크 표시가 있으면 트랜잭션을 롤백하고, UnexpectedRollbackException 예외를 던짐
+     */
+    @Test
+    void inner_rollback() {
+        log.info("외부 트랜잭션 시작");
+        TransactionStatus outer = txManager.getTransaction(new DefaultTransactionAttribute());
+
+        log.info("내부 트랜잭션 시작");
+        TransactionStatus inner = txManager.getTransaction(new DefaultTransactionAttribute());
+
+        log.info("내부 트랜잭션 롤백");
+        txManager.rollback(inner);  //rollback-only 표시
+
+        log.info("외부 트랜잭션 커밋");
+        Assertions.assertThatThrownBy(() -> txManager.commit(outer))
+                .isInstanceOf(UnexpectedRollbackException.class);
     }
 }
