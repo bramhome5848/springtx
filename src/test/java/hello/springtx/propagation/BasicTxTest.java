@@ -188,6 +188,21 @@ class BasicTxTest {
      * 정리
      - REQUIRES_NEW 옵션을 사용하면 물리 트랜잭션이 명확하게 분리
      - REQUIRES_NEW 옵션을 사용하면 커넥션이 동시에 2개 사용된다는 점을 주의
+
+     * 다양한 전파 옵션
+     1. REQUIRED : 가장 많이 사용하는 기본 설정으로 기존 트랜잭션이 없으면 생성하고, 있으면 참여
+     2. REQUIRES_NEW : 항상 새로운 트랜잭션을 생성
+     3. SUPPORT : 트랜잭션을 지원한다는 뜻으로, 기존 트랜잭션이 없으면 없는대로 진행하고 있으면 참여
+     4. NOT_SUPPORT : 트랜잭션을 지원하지 않는다는 뜻으로, 기존 트랜잭션이 유무에 관계 없이 트랜잭션 없이 진행(기존 트랜잭션은 보류)
+     5. MANDATORY : 트랜잭션이 반드시 있어야함(기존 트랜잭션에 참여), 기존 트랜잭션이 없는 경우 예외(IllegalTransactionStateException) 발생
+     6. NEVER : 트랜잭션을 사용하지 않음, 기존 트랜잭션이 있는 경우 예외(IllegalTransactionStateException) 발생
+     7. NESTED : 기존 트랜잭션이 없으면 새로운 트랜잭션을 생성, 기존 트랜잭션이 있는 경우 중첨 트랜잭션을 만듦
+     - 중첩 트랜잭션은 외부 트랜잭션의 영향을 받지만, 외부에 영향을 주지 않음
+     - 중첩 트랜잭션은 롤백되어도 외부 트랜잭션은 커밋할 수 있음
+     - 외부 트랜잭션이 롤백 되면 중첩 트랜잭션도 함께 롤백
+
+     * 참고
+     - isolation, timeout, readOnly 는 트랜잭션이 처음 시작될 때만 적용되고, 트랜잭션에 참여하는 경우에는 적용되지 않음
      */
     @Test
     void inner_rollback_requires_new() {
