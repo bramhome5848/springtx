@@ -67,4 +67,33 @@ class MemberServiceTest {
         assertTrue(memberRepository.find(username).isPresent());
         assertTrue(logRepository.find(username).isEmpty());
     }
+
+    /**
+     * MemberService        @Transactional : ON
+     * MemberRepository     @Transactional : OFF
+     * LogRepository        @Transactional : OFF
+
+     * 상황
+     - 서비스 계층에 트랜잭션 사용
+     - 회원, 로그 레포지토리에 있던 트랜잭션 주석 처리
+     -> 회원, 로그 레포지토리를 하나의 트랜잭션으로 간단하게 묶음
+
+     * 설명
+     - @Transactional 이 MemberService 에만 붙어있기 때문에 여기에만 트랜잭션 AOP 가 적용
+     -> MemberRepository, LogRepository 는 트랜잭션 AOP 가 적용되지 않음
+     - MemberService 의 시작부터 끝까지, 관련 로직은 해당 트랜잭션이 생성한 커넥션을 사용
+     -> MemberService 가 호출하는 MemberRepository, LogRepository 도 같은 커넥션을 사용하면서 트랜잭션 범위에 포함
+     */
+    @Test
+    void singleTx() {
+        //given
+        String username = "singleTx";
+
+        //when
+        memberService.joinV1(username);
+
+        //then
+        assertTrue(memberRepository.find(username).isPresent());
+        assertTrue(logRepository.find(username).isPresent());
+    }
 }
