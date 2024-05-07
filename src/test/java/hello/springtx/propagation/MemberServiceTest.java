@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.UnexpectedRollbackException;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -136,6 +137,38 @@ class MemberServiceTest {
                 .isInstanceOf(RuntimeException.class);
 
         //then : 모든 데이터가 롤백됨
+        assertTrue(memberRepository.find(username).isEmpty());
+        assertTrue(logRepository.find(username).isEmpty());
+    }
+
+    /**
+     * MemberService        @Transactional : ON
+     * MemberRepository     @Transactional : ON
+     * LogRepository        @Transactional : ON Exception
+
+     * memberService.joinV2() 의 호출
+     - joinV2() 의 경우 예외를 잡아 정상흐름으로 변환하는 로직이 추가 되어 있음
+     - 내부 트랜잭션에서 rollbackOnly 를 설정하기 때문에 결과적으로 정상 흐름 처리를 해서 외부 트랜잭션에서 커밋을 호출해도 물리 트랜잭션은 롤백됨
+     - UnexpectedRollbackException 이 AOP Proxy(MemberService Proxy) 로 던져짐
+
+     * 정리
+     - 내부 트랜잭션 중 하나라도 롤백되면 전체 트랜잭션은 롤백
+     - 내부 트랜잭션이 롤백 되었는데, 외부 트랜잭션이 커밋되면 UnexpectedRollbackException 예외 발생
+
+     * 상황 -> *** 실무에서 많이 실수하는 케이스임!!
+     - 회원 가입을 시도한 로그를 남기는데 실패하더라도 회원 가입은 유지 되어야 함
+     - 현재 모두 롤백 되기 때문에 회원 가입을 유지할 수 없음
+     */
+    @Test
+    void recoverException_fail() {
+        //given
+        String username = "로그예외_recoverException_fail";
+
+        //when
+        assertThatThrownBy(() -> memberService.joinV2(username))
+                .isInstanceOf(UnexpectedRollbackException.class);
+
+        //then : 모든 데이터가 롤백
         assertTrue(memberRepository.find(username).isEmpty());
         assertTrue(logRepository.find(username).isEmpty());
     }

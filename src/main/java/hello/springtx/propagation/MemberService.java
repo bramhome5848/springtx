@@ -42,6 +42,7 @@ public class MemberService {
      - DB 로그 저장시 예외가 발생하면 예외를 복구
      - 현재 별도의 트랜잭션 설정은 하지 않음
      */
+    @Transactional
     public void joinV2(String username) {
         Member member = new Member(username);
         Log logMessage = new Log(username);
