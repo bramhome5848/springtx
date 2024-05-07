@@ -114,4 +114,29 @@ class MemberServiceTest {
         assertTrue(memberRepository.find(username).isPresent());
         assertTrue(logRepository.find(username).isPresent());
     }
+
+    /**
+     * MemberService        @Transactional : ON
+     * MemberRepository     @Transactional : ON
+     * LogRepository        @Transactional : ON Exception
+     - Participating transaction failed - marking existing transaction as rollback-only 확인가능
+
+     * 참고
+     - 해당 과정의 경우 MemberService 에서도 런타임 예외를 받게 되는데, 로직에서 해당 런타임 예외를 처리하지 않고 밖으로 던짐
+     - 트랜잭션 AOP(MemberService Proxy) 는 런타임 예외가 발생했으므로 트랜잭션 매니저에 롤백을 요청, 이 경우 신규 트랜잭션이므로 물리 롤백 호출
+     - 어차피 롤백 되기 때문에 rollbackOnly 설정을 참고하지 않음
+     */
+    @Test
+    void outerTxOn_fail() {
+        //given
+        String username = "로그예외_outerTxOn_success";
+
+        //when
+        assertThatThrownBy(() -> memberService.joinV1(username))
+                .isInstanceOf(RuntimeException.class);
+
+        //then : 모든 데이터가 롤백됨
+        assertTrue(memberRepository.find(username).isEmpty());
+        assertTrue(logRepository.find(username).isEmpty());
+    }
 }
