@@ -172,4 +172,30 @@ class MemberServiceTest {
         assertTrue(memberRepository.find(username).isEmpty());
         assertTrue(logRepository.find(username).isEmpty());
     }
+
+    /**
+     * MemberService        @Transactional : ON
+     * MemberRepository     @Transactional : ON
+     * LogRepository        @Transactional(REQUIRES_NEW) : ON Exception
+
+     * 정리
+     - 논리 트랜잭션은 하나라도 롤배고디면 관련된 물리 트랜잭션은 롤백
+     - 해당 문제를 해결하려면 REQUIRES_NEW 를 사용하여 트랜잭션 분리
+
+     * 주의
+     - REQUIRES_NEW 를 사용하면 하나의 HTTP 요청에 2개의 데이터베이스 커넥션을 사용하게 됨
+     -> 성능이 중요한 곳에서는 이런 부분을 주의해서 사용
+     */
+    @Test
+    void recoverException_success() {
+        //given
+        String username = "로그예외_recoverException_success";
+
+        //when
+        memberService.joinV2(username);
+
+        //then : member 저장, log 롤백
+        assertTrue(memberRepository.find(username).isPresent());
+        assertTrue(logRepository.find(username).isEmpty());
+    }
 }
